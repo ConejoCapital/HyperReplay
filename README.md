@@ -84,7 +84,6 @@ Both scripts automatically concatenate split archives when necessary and emit re
 ## Notes
 
 - The raw clearinghouse snapshot archive (≈260 MB) was split into three parts to stay below GitHub's 100 MB limit. The scripts will stitch the pieces together automatically.
-- Raw approximation-era CSVs were deliberately excluded. Only canonical, real-time outputs are distributed here.
 - The repository currently targets the October 10, 2025 cascade. You can adapt the scripts to different windows by swapping in the appropriate S3 and clearinghouse snapshots.
 
 ## License
