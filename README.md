@@ -1,6 +1,6 @@
 # HyperReplay
 
-HyperReplay is a **general-purpose Hyperliquid replay toolkit**. It ships with everything required to reconstruct historical account state, fills, and ledger movements from the public S3 archives. Out of the box we demonstrate the full October 10 2025 ADL cascade, rebuilt by ConejoCapital with support from with the Hydromancer teamm, AlgoBluffy & Xeno. The same tooling can be pointed at *any* time window once you provide the corresponding raw inputs.
+HyperReplay is a **general-purpose Hyperliquid replay toolkit**. It ships with everything required to reconstruct historical account state, fills, and ledger movements from the public S3 archives. Out of the box we demonstrate the full October 10 2025 ADL cascade, rebuilt by ConejoCapital with support from with the Hydromancer team, AlgoBluffy & Xeno. The same tooling can be pointed at *any* time window once you provide the corresponding raw inputs.
 
 This repository packages:
 - Raw inputs (node fills, misc events, clearinghouse snapshots) split into GitHub-friendly chunks.
