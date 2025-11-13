@@ -79,7 +79,8 @@ Key metrics include:
 ### How It Works
 1. Load baseline account values and open positions from the clearinghouse snapshot (70 minutes before the cascade).
 2. Stream all fills (20:00–22:00 UTC) and misc ledger events in chronological order, updating account cash balances and position sizes.
-3. At each ADL event, capture real-time account value, exposure, and unrealized PNL before the ADL adjustment executes.
+3. The ledger stream now captures **every** balance delta we observed on-chain (deposits/withdrawals, account-class moves, internal/sub-account transfers, spot transfers, vault deposits/withdrawals/commissions, rewards claims, liquidation overrides, etc.).
+4. At each ADL event, capture real-time account value, exposure, and unrealized PNL before the ADL adjustment executes.
 
 ### Adapting to Future Snapshots
 - Replace the snapshot JSON files with the target block/time.
@@ -107,8 +108,8 @@ Key metrics should align with the published verification report:
 - 34,983 ADL events
 - $2.103B ADL notional
 - 94.5% profitable ADLs
-- Median leverage 0.15x
-- 1,275 negative-equity accounts ($ −125.98M aggregate)
+- Median leverage 0.18x (p95 4.23x, p99 74.18x)
+- 1,147 negative-equity accounts ($ −109.29M aggregate)
 
 ## 8. Extending the Workflow
 

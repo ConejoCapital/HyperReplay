@@ -1,11 +1,11 @@
 # HyperReplay
 
-Tools and canonical datasets to replay Hyperliquid's October 10, 2025 ADL cascade from public S3 data and clearinghouse snapshots.
+HyperReplay is a **general-purpose Hyperliquid replay toolkit**. It ships with everything required to reconstruct historical account state, fills, and ledger movements from the public S3 archives. Out of the box we demonstrate the full October 10 2025 ADL cascade, rebuilt in partnership with the Hydromancer team (AlgoBluffy & Xeno), but the same tooling can be pointed at *any* time window once you provide the corresponding raw inputs.
 
 This repository packages:
 - Raw inputs (node fills, misc events, clearinghouse snapshots) split into GitHub-friendly chunks.
-- Canonical outputs (12-minute ADL fills, liquidation feed, real-time per-position metrics).
-- Reproduction scripts that rebuild the full real-time account reconstruction and net-volume analysis from scratch.
+- Canonical outputs (12-minute ADL fills, liquidation feed, real-time per-position metrics) that match the datasets published in [HyperMultiAssetedADL](https://github.com/ConejoCapital/HyperMultiAssetedADL).
+- Reproduction scripts that rebuild the full real-time account reconstruction and net-volume analysis from scratch, including complete misc-ledger coverage (internal transfers, spot transfers, vault flows, rewards, liquidation overrides, etc.).
 
 ## Repository Layout
 
@@ -81,6 +81,19 @@ Both scripts automatically concatenate split archives when necessary and emit re
    assert {'leverage_realtime', 'is_negative_equity'} <= set(df.columns)
    ```
 
+## Adapting to other windows
+
+1. **Download the relevant S3 shards** for the period you care about (node fills, misc events, clearinghouse snapshot). The scripts expect the same directory structure — adjust the filenames or symlink if necessary.
+2. **Update the time bounds** inside `scripts/replay_real_time_accounts.py` (and the extraction script if you are trimming the fills file). The defaults are hard-coded to the ADL window (`ADL_START_TIME` / `ADL_END_TIME`).
+3. **Regenerate**:
+   ```bash
+   python scripts/extract_full_12min_adl.py      # or your custom extraction script
+   python scripts/replay_real_time_accounts.py
+   ```
+4. **Publish your outputs** under `data/canonical/` (or a new folder) to share them with downstream researchers.
+
+Ledger deltas beyond deposits/withdrawals are already handled (internal/sub-account transfers, spot transfers, vault deposits/withdrawals, vault commissions, rewards, liquidation overrides, etc.), so no additional plumbing is needed when you move to a different timeframe.
+
 ## Notes
 
 - The raw clearinghouse snapshot archive (≈260 MB) was split into three parts to stay below GitHub's 100 MB limit. The scripts will stitch the pieces together automatically.
@@ -92,4 +105,10 @@ HyperReplay is distributed under the **HyperReplay Custom License v1.0**, which 
 
 - For the full terms, see [`HyperReplay_Custom_License_v1.0.md`](HyperReplay_Custom_License_v1.0.md).
 - To discuss commercial licensing, contact **x.com/ConejoCapital** or **mauricio.jp.trujillo@gmail.com**.
+
+## Acknowledgements
+
+- Hydromancer team (AlgoBluffy & Xeno) — initial ledger deep-dives and infrastructure support.
+- Hyperliquid for publishing the full S3 archive.
+- Everyone contributing reproducibility feedback via [HyperMultiAssetedADL](https://github.com/ConejoCapital/HyperMultiAssetedADL).
 
