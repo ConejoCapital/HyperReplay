@@ -37,7 +37,9 @@ Recombine split archives before running the scripts (details below).
 - `realtime_analysis_summary.json`
 - `liquidations_full_12min.csv`
 
-These match the datasets published in [HyperMultiAssetedADL](https://github.com/ConejoCapital/HyperMultiAssetedADL) and power HyperFireworks.
+These match the datasets published in [HyperMultiAssetedADL](https://github.com/ConejoCapital/HyperMultiAssetedADL) and power HyperFireworks. They reflect the **cash-only baseline** replay (snapshot unrealized PnL removed) and include:
+- 34,983 ADL events with real-time leverage (median 0.18x, p95 4.23x, p99 74.18x)
+- Negative-equity detection for 1,147 accounts (aggregate −$109.29M)
 
 ### Scripts (`scripts/`)
 - `extract_full_12min_adl.py` – Rebuilds the canonical ADL fills and net-volume report from `node_fills`.
@@ -87,4 +89,8 @@ Both scripts automatically concatenate split archives when necessary and emit re
 
 ## License
 
-GPL-3.0. See [LICENSE](LICENSE).
+HyperReplay is distributed under the **HyperReplay Custom License v1.0**, which allows free non-commercial use and derivative work as long as the attribution requirements are preserved. **Commercial use requires a paid commercial license from ConejoCapital.**
+
+- For the full terms, see [`HyperReplay_Custom_License_v1.0.md`](HyperReplay_Custom_License_v1.0.md).
+- To discuss commercial licensing, contact **legal@conejo.capital** or **mauricio.jp.trujillo@gmail.com**.
+
