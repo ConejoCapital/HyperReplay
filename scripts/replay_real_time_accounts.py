@@ -82,6 +82,9 @@ def ensure_output_dir():
 ensure_output_dir()
 ensure_clearinghouse_inputs()
 
+# Track latest trade price per coin (seeded from snapshot marks)
+last_prices = {}
+
 # ----------------------------------------------------------------------------
 # STEP 1: Load Snapshot Data (Baseline State)
 # ----------------------------------------------------------------------------
@@ -94,34 +97,57 @@ with open(RAW_DIR / 'account_value_snapshot_758750000_1760126694218.json', 'r') 
 with open(RAW_DIR / 'perp_positions_by_market_758750000_1760126694218.json', 'r') as f:
     positions_by_market = json.load(f)
 
-# Build initial account states
+# Build initial account states (cash-only baseline)
 account_states = {}
 for acc in account_values:
     account_states[acc['user']] = {
-        'account_value': acc['account_value'],
+        'account_value': float(acc['account_value']),
         'positions': {},
-        'snapshot_time': 1760126694218
+        'snapshot_time': 1760126694218,
+        'initial_unrealized': 0.0
     }
 
-# Add positions
+# Add positions and accumulate initial unrealized PnL
 for market in positions_by_market:
     coin = market['market_name'].replace('hyperliquid:', '')
     for pos in market['positions']:
         user = pos['user']
+        size = float(pos['size'])
+        entry_price = float(pos['entry_price'])
+        notional = float(pos['notional_size'])
+        mark_price = abs(notional / size) if size else entry_price
+
         if user not in account_states:
             account_states[user] = {
-                'account_value': pos['account_value'],
+                'account_value': float(pos.get('account_value', 0.0)),
                 'positions': {},
-                'snapshot_time': 1760126694218
+                'snapshot_time': 1760126694218,
+                'initial_unrealized': 0.0
             }
+
         account_states[user]['positions'][coin] = {
-            'size': pos['size'],
-            'entry_price': pos['entry_price'],
-            'notional': pos['notional_size']
+            'size': size,
+            'entry_price': entry_price,
+            'notional': notional,
+            'mark_price': mark_price
         }
 
+        if size != 0:
+            account_states[user]['initial_unrealized'] += size * (mark_price - entry_price)
+
+        if mark_price and mark_price > 0:
+            last_prices.setdefault(coin, mark_price)
+
+# Convert account values to "cash" by removing initial unrealized PnL
+for state in account_states.values():
+    initial_u = state.get('initial_unrealized', 0.0)
+    state['initial_account_value'] = state['account_value']
+    state['account_value'] = state['account_value'] - initial_u
+
 print(f"  ✓ Loaded {len(account_states):,} accounts")
-print(f"  ✓ Total account value at snapshot: ${sum(s['account_value'] for s in account_states.values()):,.0f}")
+print(f"  ✓ Total account value at snapshot: ${sum(s['initial_account_value'] for s in account_states.values()):,.0f}")
+print(f"  ✓ Total initial unrealized removed: ${sum(s.get('initial_unrealized', 0.0) for s in account_states.values()):,.0f}")
+
 
 # ----------------------------------------------------------------------------
 # STEP 2: Load ALL Events (Fills + Misc)
@@ -196,37 +222,103 @@ for hour_file in ['20_misc.json', '21_misc.json']:
                                 'funding_amount': float(delta['funding_amount'])
                             })
 
-                    # Ledger events (deposits/withdrawals)
+                    # Ledger events (deposits/withdrawals and other balance updates)
                     if 'LedgerUpdate' in inner:
                         ledger = inner['LedgerUpdate']
                         delta = ledger.get('delta', {})
 
-                        if delta.get('type') == 'deposit':
-                            for user in ledger['users']:
+                        dtype = delta.get('type')
+                        users = ledger.get('users', [])
+
+                        def record_transfer(user_id, amount):
+                            if user_id and amount:
+                                all_events.append({
+                                    'type': 'transfer',
+                                    'time': timestamp,
+                                    'user': user_id,
+                                    'amount': amount
+                                })
+
+                        if dtype == 'deposit':
+                            amount = float(delta.get('usdc', delta.get('amount', 0)))
+                            for user in users:
                                 all_events.append({
                                     'type': 'deposit',
                                     'time': timestamp,
                                     'user': user,
-                                    'amount': float(delta.get('usdc', 0))
+                                    'amount': amount
                                 })
-                        elif delta.get('type') == 'withdraw':
-                            for user in ledger['users']:
+                        elif dtype == 'withdraw':
+                            amount = float(delta.get('usdc', 0))
+                            fee = float(delta.get('fee', 0))
+                            total = amount + fee
+                            for user in users:
                                 all_events.append({
                                     'type': 'withdrawal',
                                     'time': timestamp,
                                     'user': user,
-                                    'amount': float(delta.get('usdc', 0))
+                                    'amount': total
                                 })
-                        elif delta.get('type') == 'accountClassTransfer':
-                            for user in ledger['users']:
-                                usdc_amount = float(delta.get('usdc', 0))
-                                to_perp = delta.get('toPerp', False)
+                        elif dtype == 'accountClassTransfer':
+                            usdc_amount = float(delta.get('usdc', 0))
+                            to_perp = delta.get('toPerp', False)
+                            sign = 1 if to_perp else -1
+                            for user in users:
+                                record_transfer(user, sign * usdc_amount)
+                        elif dtype in ('internalTransfer', 'subAccountTransfer'):
+                            usdc_amount = float(delta.get('usdc', 0))
+                            source = delta.get('user') or (users[0] if users else None)
+                            destination = delta.get('destination') or (users[1] if len(users) > 1 else None)
+                            fee = float(delta.get('fee', 0))
+                            if source:
+                                record_transfer(source, -(usdc_amount + fee))
+                            if destination:
+                                record_transfer(destination, usdc_amount)
+                        elif dtype == 'spotTransfer':
+                            usdc_amount = float(delta.get('usdcValue', 0))
+                            source = delta.get('user')
+                            destination = delta.get('destination')
+                            if source:
+                                record_transfer(source, -usdc_amount)
+                            if destination:
+                                record_transfer(destination, usdc_amount)
+                        elif dtype == 'vaultDeposit':
+                            amount = float(delta.get('usdc', delta.get('requestedUsd', 0)))
+                            user = delta.get('user') or (users[0] if users else None)
+                            vault = delta.get('vault') or (users[1] if len(users) > 1 else None)
+                            if user:
+                                record_transfer(user, -amount)
+                            if vault:
+                                record_transfer(vault, amount)
+                        elif dtype == 'vaultWithdraw':
+                            amount = float(delta.get('netWithdrawnUsd', delta.get('usdc', delta.get('requestedUsd', 0))))
+                            user = delta.get('user') or (users[0] if users else None)
+                            vault = delta.get('vault') or (users[1] if len(users) > 1 else None)
+                            if vault:
+                                record_transfer(vault, -amount)
+                            if user:
+                                record_transfer(user, amount)
+                        elif dtype == 'vaultLeaderCommission':
+                            amount = float(delta.get('usdc', 0))
+                            user = delta.get('user') or (users[0] if users else None)
+                            if user:
+                                record_transfer(user, amount)
+                        elif dtype == 'rewardsClaim':
+                            token = delta.get('token')
+                            amount = float(delta.get('amount', 0))
+                            if token == 'USDC' and users:
+                                record_transfer(users[0], amount)
+                        elif dtype == 'liquidation':
+                            account_value = delta.get('accountValue')
+                            user = delta.get('user') or (users[0] if users else None)
+                            if user and account_value is not None:
                                 all_events.append({
-                                    'type': 'transfer',
+                                    'type': 'account_value_override',
                                     'time': timestamp,
                                     'user': user,
-                                    'amount': usdc_amount if to_perp else -usdc_amount
+                                    'value': float(account_value)
                                 })
+                        # Other ledger update types (e.g., staking transfers, activation gas) do not affect USDC balances
 
 print(f"  ✓ Loaded misc events")
 print(f"  ✓ Total events: {len(all_events):,}")
@@ -304,6 +396,9 @@ for event in events_in_window:
 
     elif event_type == 'transfer':
         working_states[user]['account_value'] += event['amount']
+
+    elif event_type == 'account_value_override':
+        working_states[user]['account_value'] = event['value']
 
 print(f"\n  ✓ Processed {event_count:,} events")
 print(f"  ✓ Account states reconstructed through {datetime.fromtimestamp(ADL_END_TIME/1000).strftime('%H:%M:%S')}")
