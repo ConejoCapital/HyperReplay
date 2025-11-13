@@ -92,5 +92,5 @@ Both scripts automatically concatenate split archives when necessary and emit re
 HyperReplay is distributed under the **HyperReplay Custom License v1.0**, which allows free non-commercial use and derivative work as long as the attribution requirements are preserved. **Commercial use requires a paid commercial license from ConejoCapital.**
 
 - For the full terms, see [`HyperReplay_Custom_License_v1.0.md`](HyperReplay_Custom_License_v1.0.md).
-- To discuss commercial licensing, contact **legal@conejo.capital** or **mauricio.jp.trujillo@gmail.com**.
+- To discuss commercial licensing, contact **x.com/ConejoCapital** or **mauricio.jp.trujillo@gmail.com**.
 
