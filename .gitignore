@@ -1,0 +1,4 @@
+# Ignore reconstructed artifacts (scripts can regenerate them)
+data/raw/*.json
+data/raw/*.tar.xz
+data/raw/node_fills_*.lz4
