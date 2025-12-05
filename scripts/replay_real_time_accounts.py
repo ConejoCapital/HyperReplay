@@ -379,7 +379,14 @@ for event in events_in_window:
             }
 
         # Update position size based on fill
-        new_size = event['startPosition']  # startPosition is BEFORE fill, size is fill amount
+        # startPosition is BEFORE fill, size is fill amount
+        # For buy (side='B'): position increases, for sell (side='A'): position decreases
+        start_position = event['startPosition']
+        fill_size = event['size']
+        if event['side'] == 'B':  # Buy
+            new_size = start_position + fill_size
+        else:  # Sell (side='A')
+            new_size = start_position - fill_size
         working_states[user]['positions'][coin]['size'] = new_size
 
         # Update last traded price
