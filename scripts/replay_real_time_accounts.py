@@ -456,9 +456,18 @@ for adl_idx, adl in enumerate(adl_events):
     account_state = working_states[user]
 
     # Calculate unrealized PNL for ALL positions at this moment
+    # For the ADL'd coin, use startPosition (before ADL); for others, use current position size
     total_unrealized_pnl = 0.0
+    position_size_at_adl = adl['startPosition']  # Position size BEFORE this ADL
+    
     for pos_coin, position in account_state['positions'].items():
-        if position['size'] == 0:
+        # For the ADL'd coin, use startPosition; for others, use position size after all fills up to this point
+        if pos_coin == coin:
+            pos_size = position_size_at_adl
+        else:
+            pos_size = position['size']
+        
+        if pos_size == 0:
             continue
 
         # Get current price (last traded price)
@@ -470,27 +479,29 @@ for adl_idx, adl in enumerate(adl_events):
         if entry_price is None or entry_price == 0:
             continue
 
-        if position['size'] > 0:
-            unrealized = position['size'] * (current_price - entry_price)
+        if pos_size > 0:
+            unrealized = pos_size * (current_price - entry_price)
         else:
-            unrealized = abs(position['size']) * (entry_price - current_price)
+            unrealized = abs(pos_size) * (entry_price - current_price)
 
         total_unrealized_pnl += unrealized
 
     total_equity = account_state['account_value'] + total_unrealized_pnl
 
-    if coin not in account_state['positions']:
-        continue
-
-    position = account_state['positions'][coin]
-    entry_price = position.get('entry_price', adl['price'])
-
-    if position['size'] > 0:
-        position_unrealized_pnl = position['size'] * (adl['price'] - entry_price)
+    # Get entry price from position if available, otherwise use ADL price
+    if coin in account_state['positions']:
+        position = account_state['positions'][coin]
+        entry_price = position.get('entry_price', adl['price'])
     else:
-        position_unrealized_pnl = abs(position['size']) * (entry_price - adl['price'])
+        entry_price = adl['price']
 
-    position_notional = abs(position['size']) * adl['price']
+    # Calculate unrealized PNL using position size BEFORE ADL
+    if position_size_at_adl > 0:
+        position_unrealized_pnl = position_size_at_adl * (adl['price'] - entry_price)
+    else:
+        position_unrealized_pnl = abs(position_size_at_adl) * (entry_price - adl['price'])
+
+    position_notional = abs(position_size_at_adl) * adl['price']
     pnl_percent = (position_unrealized_pnl / position_notional * 100) if position_notional > 0 else 0
 
     leverage = position_notional / account_state['account_value'] if account_state['account_value'] > 0 else 0
@@ -505,7 +516,7 @@ for adl_idx, adl in enumerate(adl_events):
         'adl_size': adl['size'],
         'adl_notional': abs(adl['size']) * adl['price'],
         'closed_pnl': adl['closedPnl'],
-        'position_size': position['size'],
+        'position_size': position_size_at_adl,
         'entry_price': entry_price,
         'account_value_realtime': account_state['account_value'],
         'total_unrealized_pnl': total_unrealized_pnl,
