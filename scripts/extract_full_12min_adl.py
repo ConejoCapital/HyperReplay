@@ -58,7 +58,7 @@ def extract_adl_fills():
 
     source_file = assemble_lz4()
     print(f"Source: {source_file.relative_to(REPO_ROOT)}")
-    print("\n📥 Decompressing and parsing LZ4 data...")
+    print("\nDecompressing and parsing LZ4 data...")
 
     adl_fills = []
     total_fills = 0
@@ -135,7 +135,7 @@ def extract_adl_fills():
                     print(f"  Warning: Error parsing line {line_num}: {e}")
                 continue
 
-    print(f"\n✅ Extraction complete!")
+    print(f"\nExtraction complete!")
     print(f"  Lines processed: {lines_processed:,}")
     print(f"  Fills in time window: {total_fills:,}")
     print(f"  ADL events found: {len(adl_fills):,}")
@@ -218,7 +218,7 @@ def print_comparison(old_notional, new_notional):
 
 def generate_markdown_report(df_results, total_notional, total_pnl, total_events):
     """Generate comprehensive markdown report."""
-    print("\n📄 Generating markdown report...")
+    print("\nGenerating markdown report...")
 
     content = f"""# ADL Net Volume Analysis - FULL 12-MINUTE EVENT
 
@@ -323,10 +323,10 @@ def generate_markdown_report(df_results, total_notional, total_pnl, total_events
 
 ## Data Quality
 
-✅ **Complete dataset**: Full 12-minute event (not a sample)  
-✅ **Blockchain-verified**: All ADL events from S3 node fills  
-✅ **No heuristics**: Only explicitly labeled ADL events  
-✅ **Spot positions excluded**: @ tokens filtered out  
+**Complete dataset**: Full 12-minute event (not a sample)  
+**Blockchain-verified**: All ADL events from S3 node fills  
+**No heuristics**: Only explicitly labeled ADL events  
+**Spot positions excluded**: @ tokens filtered out  
 
 ---
 
@@ -348,18 +348,18 @@ Previous analysis used SonarX data (21:15-21:17 UTC, 2 minutes):
     with open(report_path, "w") as f:
         f.write(content)
 
-    print(f"  ✓ {report_path.relative_to(REPO_ROOT)}")
+    print(f"  {report_path.relative_to(REPO_ROOT)}")
 
 
 def main():
     """Main execution."""
-    print("\n🚀 Analyzing FULL 12-MINUTE ADL EVENT\n")
+    print("\nAnalyzing FULL 12-MINUTE ADL EVENT\n")
 
     df_adl = extract_adl_fills()
 
     raw_out = OUTPUT_DIR / "adl_fills_full_12min_raw.csv"
     df_adl.to_csv(raw_out, index=False)
-    print(f"\n  ✓ Saved raw ADL fills: {raw_out.relative_to(REPO_ROOT)}")
+    print(f"\nSaved raw ADL fills: {raw_out.relative_to(REPO_ROOT)}")
 
     df_results = calculate_adl_volume(df_adl)
 
@@ -367,20 +367,20 @@ def main():
 
     print_comparison(285_546_805, total_notional)
 
-    print("\n📤 Exporting results...")
+    print("\nExporting results...")
     csv_out = OUTPUT_DIR / "adl_net_volume_full_12min.csv"
     df_results.to_csv(csv_out, index=False)
-    print(f"  ✓ {csv_out.relative_to(REPO_ROOT)}")
+    print(f"  {csv_out.relative_to(REPO_ROOT)}")
 
     generate_markdown_report(df_results, total_notional, total_pnl, total_events)
 
     print("\n" + "=" * 80)
-    print("✅ FULL 12-MINUTE ANALYSIS COMPLETE")
+    print("FULL 12-MINUTE ANALYSIS COMPLETE")
     print("=" * 80)
     print(f"\nTotal ADL'd: ${total_notional:,.0f} across {len(df_results)} tickers")
     print(f"Total Events: {total_events:,} ADL events in 12 minutes")
     print(f"Total PNL: ${total_pnl:,.0f} in forced closures")
-    print("\n📁 Files created:")
+    print("\nFiles created:")
     print(f"  • {raw_out.relative_to(REPO_ROOT)}")
     print(f"  • {csv_out.relative_to(REPO_ROOT)}")
     print("  • data/canonical/ADL_NET_VOLUME_FULL_12MIN.md")
