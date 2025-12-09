@@ -47,6 +47,8 @@ These match the datasets published in [HyperMultiAssetedADL](https://github.com/
 
 Both scripts automatically concatenate split archives when necessary and emit results into `data/canonical/`.
 
+**Recent improvements**: The replay script includes enhanced position tracking with robust fallback handling for edge cases in fill data. See [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for details.
+
 ## Quick Start
 
 1. **Install dependencies** (Python 3.10+):
