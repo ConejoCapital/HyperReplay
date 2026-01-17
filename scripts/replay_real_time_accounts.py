@@ -521,6 +521,31 @@ for adl_idx, adl in enumerate(adl_events):
 
     is_negative_equity = total_equity < 0
 
+    # Compute liquidated user's (loser's) total equity at this moment
+    # IMPORTANT: Use working_states (current state) not account_states (initial snapshot)
+    liquidated_user = adl['liquidation_data']['liquidatedUser'] if adl['liquidation_data'] else None
+    liquidated_total_equity = None
+    liquidated_total_unrealized_pnl = None
+    if liquidated_user and liquidated_user in working_states:
+        liq_state = working_states[liquidated_user]
+        liq_unrealized = 0.0
+        for pos_coin, pos in liq_state['positions'].items():
+            pos_size = pos['size']
+            if pos_size == 0:
+                continue
+            current_price = last_prices.get(pos_coin, 0)
+            if current_price == 0:
+                continue
+            liq_entry = pos.get('entry_price', current_price)
+            if liq_entry is None or liq_entry == 0:
+                continue
+            if pos_size > 0:
+                liq_unrealized += pos_size * (current_price - liq_entry)
+            else:
+                liq_unrealized += abs(pos_size) * (liq_entry - current_price)
+        liquidated_total_unrealized_pnl = liq_unrealized
+        liquidated_total_equity = liq_state['account_value'] + liq_unrealized
+
     adl_with_realtime.append({
         'user': user,
         'coin': coin,
@@ -538,7 +563,9 @@ for adl_idx, adl in enumerate(adl_events):
         'leverage_realtime': leverage,
         'position_unrealized_pnl': position_unrealized_pnl,
         'pnl_percent': pnl_percent,
-        'liquidated_user': adl['liquidation_data']['liquidatedUser'] if adl['liquidation_data'] else None
+        'liquidated_user': liquidated_user,
+        'liquidated_total_equity': liquidated_total_equity,
+        'liquidated_total_unrealized_pnl': liquidated_total_unrealized_pnl
     })
 
 print(f"\n  ✓ Calculated real-time metrics for {len(adl_with_realtime):,} ADL events")
