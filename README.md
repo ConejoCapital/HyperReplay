@@ -1,3 +1,5 @@
+
+
 # HyperReplay
 
 HyperReplay is a **general-purpose Hyperliquid replay toolkit**. It ships with everything required to reconstruct historical account state, fills, and ledger movements from the public S3 archives. Out of the box we demonstrate the full October 10 2025 ADL cascade, rebuilt by ConejoCapital with support from with the Hydromancer team, AlgoBluffy & Xeno. The same tooling can be pointed at *any* time window once you provide the corresponding raw inputs.
@@ -86,7 +88,7 @@ Both scripts automatically concatenate split archives when necessary and emit re
 ## Adapting to other windows
 
 1. **Download the relevant S3 shards** for the period you care about (node fills, misc events, clearinghouse snapshot). The scripts expect the same directory structure — adjust the filenames or symlink if necessary.
-2. **Update the time bounds** inside `scripts/replay_real_time_accounts.py` (and the extraction script if you are trimming the fills file). The defaults are hard-coded to the ADL window (`ADL_START_TIME` / `ADL_END_TIME`).
+2. **Update the time bounds** inside `scripts/replay_real_time_accounts.py` (and the extraction script if you are trimming the fills file). The defaults are hard-coded to the ADL window (`ADL_START_TIME` / `ADL_END_TIME` in the replay script, and `ADL_START` / `ADL_END` in the extraction script).
 3. **Regenerate**:
    ```bash
    python scripts/extract_full_12min_adl.py      # or your custom extraction script
@@ -113,4 +115,3 @@ HyperReplay is distributed under the **HyperReplay Custom License v1.0**, which 
 - Hydromancer team (AlgoBluffy & Xeno) — initial ledger deep-dives and infrastructure support.
 - Hyperliquid for publishing the full S3 archive.
 - Everyone contributing reproducibility feedback via [HyperMultiAssetedADL](https://github.com/ConejoCapital/HyperMultiAssetedADL).
-
